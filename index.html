@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Godfe2ray - Cyberpunk VPN & DNS Tool</title>
+    <meta name="description" content="Godfe2ray - Professional VPN & DNS tool with 6 modes including DoH3, WARP, DNSCrypt and Anti-DPI">
+    <style>
+        /* ============================================
+           RESET & BASE
+           ============================================ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: #08080e;
+            color: #ffffff;
+            font-family: 'Segoe UI', 'Vazirmatn', Tahoma, sans-serif;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* ============================================
+           ANIMATED BACKGROUND CANVAS
+           (animated blue grid + noise particles - matching the splash screen)
+           ============================================ */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* subtle dark gradient overlay on background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(ellipse at center bottom, rgba(40, 100, 180, 0.08) 0%, transparent 70%);
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* ============================================
+           NAVBAR
+           ============================================ */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            background: rgba(8, 8, 14, 0.6);
+            border-bottom: 1px solid rgba(40, 100, 180, 0.15);
+        }
+
+        .nav-logo {
+            font-family: 'Arial Black', 'Impact', sans-serif;
+            font-size: 22px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: -1px;
+            text-decoration: none;
+            position: relative;
+        }
+
+        .nav-logo::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #4064b4, transparent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: #ffffff;
+        }
+
+        .nav-telegram {
+            padding: 8px 18px;
+            border: 1px solid rgba(40, 100, 180, 0.4);
+            border-radius: 6px;
+            background: rgba(40, 100, 180, 0.1);
+            color: #ffffff !important;
+        }
+
+        .nav-telegram:hover {
+            background: rgba(40, 100, 180, 0.25);
+            border-color: rgba(40, 100, 180, 0.7);
+        }
+
+        /* ============================================
+           HERO SECTION
+           ============================================ */
+        .hero {
+            position: relative;
+            z-index: 2;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 100px 20px 60px;
+        }
+
+        /* glitch title - matching cyberpunk splash style */
+        .glitch-title {
+            font-family: 'Arial Black', 'Impact', 'Segoe UI Black', sans-serif;
+            font-size: clamp(48px, 10vw, 96px);
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: -2px;
+            position: relative;
+            text-shadow:
+                0 0 20px rgba(255, 255, 255, 0.15),
+                0 0 40px rgba(40, 100, 180, 0.3);
+            margin-bottom: 24px;
+            animation: glitch-skew 4s infinite linear alternate-reverse;
+        }
+
+        /* glitch layers (red and blue) */
+        .glitch-title::before,
+        .glitch-title::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch-title::before {
+            color: #0066ff;
+            z-index: -1;
+            animation: glitch-1 3s infinite linear alternate-reverse;
+        }
+
+        .glitch-title::after {
+            color: #ff0040;
+            z-index: -2;
+            animation: glitch-2 2.5s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-skew {
+            0%, 100% { transform: skew(0deg); }
+            20% { transform: skew(0.5deg); }
+            40% { transform: skew(-0.3deg); }
+            60% { transform: skew(0.2deg); }
+            80% { transform: skew(-0.4deg); }
+        }
+
+        @keyframes glitch-1 {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-2px, 1px); }
+            40% { transform: translate(2px, -1px); }
+            60% { transform: translate(-1px, 2px); }
+            80% { transform: translate(1px, -2px); }
+        }
+
+        @keyframes glitch-2 {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(2px, -1px); }
+            40% { transform: translate(-2px, 1px); }
+            60% { transform: translate(1px, -2px); }
+            80% { transform: translate(-1px, 2px); }
+        }
+
+        .hero-subtitle {
+            font-size: clamp(14px, 2vw, 18px);
+            color: rgba(255, 255, 255, 0.6);
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 50px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-weight: 500;
+        }
+
+        .hero-description {
+            max-width: 700px;
+            font-size: 16px;
+            line-height: 1.8;
+            color: rgba(255, 255, 255, 0.75);
+            margin-bottom: 50px;
+            font-weight: 400;
+        }
+
+        /* ============================================
+           BUTTONS - glowing and stylish
+           ============================================ */
+        .cta-buttons {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 60px;
+        }
+
+        /* main glowing download button */
+        .btn-download {
+            position: relative;
+            padding: 18px 48px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            text-decoration: none;
+            background: linear-gradient(135deg, #0044bb 0%, #0066ff 50%, #0044bb 100%);
+            border: 1px solid rgba(0, 102, 255, 0.6);
+            border-radius: 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow:
+                0 0 20px rgba(0, 102, 255, 0.4),
+                0 0 40px rgba(0, 102, 255, 0.2),
+                inset 0 0 20px rgba(255, 255, 255, 0.1);
+            animation: glow-pulse 2s ease-in-out infinite;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-download:hover {
+            transform: translateY(-3px);
+            box-shadow:
+                0 0 30px rgba(0, 102, 255, 0.7),
+                0 0 60px rgba(0, 102, 255, 0.4),
+                inset 0 0 30px rgba(255, 255, 255, 0.2);
+            background: linear-gradient(135deg, #0055dd 0%, #0077ff 50%, #0055dd 100%);
+        }
+
+        .btn-download:active {
+            transform: translateY(-1px);
+        }
+
+        /* shimmer effect on download button */
+        .btn-download::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.4),
+                transparent
+            );
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            50%, 100% { left: 100%; }
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% {
+                box-shadow:
+                    0 0 20px rgba(0, 102, 255, 0.4),
+                    0 0 40px rgba(0, 102, 255, 0.2),
+                    inset 0 0 20px rgba(255, 255, 255, 0.1);
+            }
+            50% {
+                box-shadow:
+                    0 0 30px rgba(0, 102, 255, 0.6),
+                    0 0 60px rgba(0, 102, 255, 0.3),
+                    inset 0 0 25px rgba(255, 255, 255, 0.15);
+            }
+        }
+
+        /* telegram button */
+        .btn-telegram {
+            padding: 18px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            text-decoration: none;
+            background: rgba(40, 100, 180, 0.15);
+            border: 1px solid rgba(40, 100, 180, 0.5);
+            border-radius: 8px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-telegram:hover {
+            background: rgba(40, 100, 180, 0.3);
+            border-color: rgba(40, 100, 180, 0.8);
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(40, 100, 180, 0.3);
+        }
+
+        /* SVG icons inside buttons */
+        .btn-icon {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        /* stats */
+        .hero-stats {
+            display: flex;
+            gap: 60px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 40px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 900;
+            color: #ffffff;
+            font-family: 'Consolas', monospace;
+            letter-spacing: -1px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 4px;
+            font-family: 'Consolas', monospace;
+        }
+
+        /* ============================================
+           FEATURES SECTION
+           ============================================ */
+        .features {
+            position: relative;
+            z-index: 2;
+            padding: 100px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            text-align: center;
+            font-family: 'Arial Black', sans-serif;
+            font-size: clamp(28px, 5vw, 48px);
+            font-weight: 900;
+            color: #ffffff;
+            margin-bottom: 16px;
+            letter-spacing: -1px;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 60px;
+            font-family: 'Consolas', monospace;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: rgba(40, 100, 180, 0.05);
+            border: 1px solid rgba(40, 100, 180, 0.2);
+            border-radius: 12px;
+            padding: 32px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #0066ff, transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover {
+            background: rgba(40, 100, 180, 0.1);
+            border-color: rgba(40, 100, 180, 0.5);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px rgba(0, 102, 255, 0.15);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            font-size: 36px;
+            margin-bottom: 16px;
+            display: block;
+        }
+
+        .feature-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 10px;
+            font-family: 'Consolas', monospace;
+            letter-spacing: 0.5px;
+        }
+
+        .feature-desc {
+            font-size: 14px;
+            line-height: 1.7;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .feature-tag {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 4px 10px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #0066ff;
+            background: rgba(0, 102, 255, 0.1);
+            border: 1px solid rgba(0, 102, 255, 0.3);
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-family: 'Consolas', monospace;
+        }
+
+        /* ============================================
+           FOOTER
+           ============================================ */
+        .footer {
+            position: relative;
+            z-index: 2;
+            padding: 60px 20px 30px;
+            text-align: center;
+            border-top: 1px solid rgba(40, 100, 180, 0.15);
+            background: rgba(8, 8, 14, 0.6);
+            backdrop-filter: blur(10px);
+        }
+
+        .footer-logo {
+            font-family: 'Arial Black', sans-serif;
+            font-size: 28px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: -1px;
+            margin-bottom: 16px;
+        }
+
+        .footer-text {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+        }
+
+        .footer-links a {
+            color: rgba(255, 255, 255, 0.6);
+            text-decoration: none;
+            font-size: 13px;
+            padding: 8px 16px;
+            border: 1px solid rgba(40, 100, 180, 0.2);
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .footer-links a:hover {
+            color: #ffffff;
+            background: rgba(40, 100, 180, 0.15);
+            border-color: rgba(40, 100, 180, 0.5);
+        }
+
+        .footer-copy {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.3);
+            letter-spacing: 1px;
+            font-family: 'Consolas', monospace;
+        }
+
+        /* ============================================
+           RESPONSIVE
+           ============================================ */
+        @media (max-width: 768px) {
+            .navbar {
+                padding: 14px 20px;
+            }
+
+            .nav-links {
+                gap: 15px;
+            }
+
+            .nav-links a:not(.nav-telegram) {
+                display: none;
+            }
+
+            .hero {
+                padding: 80px 16px 40px;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: stretch;
+                max-width: 320px;
+                margin: 0 auto 40px;
+            }
+
+            .btn-download,
+            .btn-telegram {
+                text-align: center;
+                justify-content: center;
+            }
+
+            .hero-stats {
+                gap: 30px;
+            }
+
+            .stat-number {
+                font-size: 24px;
+            }
+
+            .features {
+                padding: 60px 16px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ============================================
+           SCROLLBAR
+           ============================================ */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #08080e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(40, 100, 180, 0.4);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(40, 100, 180, 0.6);
+        }
+
+        /* selection */
+        ::selection {
+            background: rgba(0, 102, 255, 0.3);
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <!-- Canvas for animated grid + noise (matching splash screen) -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- ============================================
+         NAVBAR
+         ============================================ -->
+    <nav class="navbar">
+        <a href="#" class="nav-logo">Godfe2ray</a>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#download">Download</a>
+            <!-- Telegram link -->
+            <a href="https://t.me/Godfe2ray" target="_blank" rel="noopener" class="nav-telegram">
+                Telegram
+            </a>
+        </div>
+    </nav>
+
+    <!-- ============================================
+         HERO SECTION
+         ============================================ -->
+    <section class="hero" id="download">
+        <h1 class="glitch-title" data-text="Godfe2ray">Godfe2ray</h1>
+        <p class="hero-subtitle">// Cyberpunk VPN & DNS Tool</p>
+        <p class="hero-description">
+            A professional and portable VPN & DNS tool with 6 different modes including
+            <strong style="color:#ffffff;">DoH3 (HTTP/3 over QUIC)</strong>,
+            Cloudflare WARP, WireGuard, DNSCrypt, Anti-DPI and Custom DoH.
+            No server required, fully secure and lightweight.
+        </p>
+
+        <div class="cta-buttons">
+            <!-- GitHub Releases link -->
+            <a href="https://github.com/davoo233/Godfe2ray/releases/latest" target="_blank" rel="noopener" class="btn-download">
+                <svg class="btn-icon" viewBox="0 0 24 24">
+                    <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5zm0 2.18l7 3.5v7.64c0 4.45-3.08 8.45-7 9.69-3.92-1.24-7-5.24-7-9.69V7.68l7-3.5zM12 7l-4 4h2.5v4h3v-4H16l-4-4z"/>
+                </svg>
+                Download Godfe2ray
+            </a>
+
+            <!-- Telegram link -->
+            <a href="https://t.me/Godfe2ray" target="_blank" rel="noopener" class="btn-telegram">
+                <svg class="btn-icon" viewBox="0 0 24 24">
+                    <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
+                </svg>
+                Telegram Channel
+            </a>
+        </div>
+
+        <div class="hero-stats">
+            <div class="stat-item">
+                <div class="stat-number">6</div>
+                <div class="stat-label">VPN Modes</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">100%</div>
+                <div class="stat-label">Portable</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">2025</div>
+                <div class="stat-label">DoH3 Ready</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">0</div>
+                <div class="stat-label">Server Needed</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+         FEATURES SECTION
+         ============================================ -->
+    <section class="features" id="features">
+        <h2 class="section-title">Godra Features</h2>
+        <p class="section-subtitle">// 6 modes of encrypted connection</p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <span class="feature-icon">🚀</span>
+                <h3 class="feature-title">WARP+ Enhanced</h3>
+                <p class="feature-desc">
+                    Full Cloudflare VPN tunnel with automatic endpoint scanning for best latency.
+                    Better than the official Warp app.
+                </p>
+                <span class="feature-tag">Mode 0</span>
+            </div>
+
+            <div class="feature-card">
+                <span class="feature-icon">⚡</span>
+                <h3 class="feature-title">WARP WireGuard</h3>
+                <p class="feature-desc">
+                    Pure WireGuard connection via wgcf - independent of warp-svc service, faster and lighter.
+                </p>
+                <span class="feature-tag">Mode 1</span>
+            </div>
+
+            <div class="feature-card">
+                <span class="feature-icon">🌐</span>
+                <h3 class="feature-title">INTRA DNS Proxy</h3>
+                <p class="feature-desc">
+                    Local DNS proxy similar to Google Intra with DoH/DoT encryption and DNSSEC validation.
+                </p>
+                <span class="feature-tag">Mode 2</span>
+            </div>
+
+            <div class="feature-card">
+                <span class="feature-icon">🔒</span>
+                <h3 class="feature-title">DNSCrypt</h3>
+                <p class="feature-desc">
+                    DNSCrypt protocol with x25519chacha20poly1305 encryption - the most secure DNS encryption.
+                </p>
+                <span class="feature-tag">Mode 3</span>
+            </div>
+
+            <div class="feature-card">
+                <span class="feature-icon">🛡️</span>
+                <h3 class="feature-title">Anti-DPI</h3>
+                <p class="feature-desc">
+                    GoodbyeDPI to bypass DPI filtering and DNS poisoning without needing a VPN.
+                </p>
+                <span class="feature-tag">Mode 4</span>
+            </div>
+
+            <div class="feature-card">
+                <span class="feature-icon">✨</span>
+                <h3 class="feature-title">QUICK DoH3</h3>
+                <p class="feature-desc">
+                    Next-generation DNS-over-HTTPS with HTTP/3 over QUIC - 0-RTT, Multiplexing, no Head-of-Line blocking.
+                    2025 standard (RFC 9114/9250).
+                </p>
+                <span class="feature-tag">NEW 2025</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ============================================
+         FOOTER
+         ============================================ -->
+    <footer class="footer">
+        <div class="footer-logo">Godfe2ray</div>
+        <p class="footer-text">
+            Portable VPN & DNS tool - no server, no external service connections<br>
+            Built with ❤️ for internet freedom
+        </p>
+        <div class="footer-links">
+            <!-- GitHub link -->
+            <a href="https://github.com/davoo233/Godfe2ray" target="_blank" rel="noopener">
+                <svg class="btn-icon" viewBox="0 0 24 24" style="width:16px;height:16px;">
+                    <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+                </svg>
+                GitHub
+            </a>
+            <!-- Telegram link -->
+            <a href="https://t.me/Godfe2ray" target="_blank" rel="noopener">
+                <svg class="btn-icon" viewBox="0 0 24 24" style="width:16px;height:16px;">
+                    <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
+                </svg>
+                Telegram
+            </a>
+        </div>
+        <p class="footer-copy">// © 2025 Godfe2ray - All Rights Reserved</p>
+    </footer>
+
+    <!-- ============================================
+         JAVASCRIPT - animated grid + noise (matching splash screen)
+         ============================================ -->
+    <script>
+        (function() {
+            const canvas = document.getElementById('bg-canvas');
+            const ctx = canvas.getContext('2d');
+
+            let width, height;
+            let gridOffset = 0;
+            let noiseParticles = [];
+
+            // set canvas dimensions
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+                generateNoise();
+            }
+
+            // generate noise particles (matching splash: 500 particles with alpha 12-45)
+            function generateNoise() {
+                noiseParticles = [];
+                const count = Math.min(500, Math.floor((width * height) / 2000));
+                for (let i = 0; i < count; i++) {
+                    noiseParticles.push({
+                        x: Math.random() * width,
+                        y: Math.random() * height,
+                        alpha: 12 + Math.random() * 33, // 12-45
+                        size: Math.random() < 0.75 ? 1 : 2
+                    });
+                }
+            }
+
+            // draw background (grid + noise)
+            function draw() {
+                // black background with blue tint (matching QColor(8, 8, 14))
+                ctx.fillStyle = '#08080e';
+                ctx.fillRect(0, 0, width, height);
+
+                // --- animated subtle blue grid ---
+                const spacing = 40;
+                const off = gridOffset;
+
+                // main grid lines (alpha 18)
+                ctx.strokeStyle = 'rgba(40, 100, 180, 0.07)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let x = off; x < width; x += spacing) {
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                }
+                for (let y = off; y < height; y += spacing) {
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                }
+                ctx.stroke();
+
+                // fine grid lines (alpha 8)
+                ctx.strokeStyle = 'rgba(40, 100, 180, 0.03)';
+                ctx.beginPath();
+                for (let x = off + spacing / 2; x < width; x += spacing) {
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                }
+                for (let y = off + spacing / 2; y < height; y += spacing) {
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                }
+                ctx.stroke();
+
+                // --- noise particles ---
+                for (const p of noiseParticles) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha / 255})`;
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                }
+
+                // grid movement (matching splash: 4px per frame)
+                gridOffset = (gridOffset + 0.5) % spacing;
+            }
+
+            // animation (~8 FPS for performance - matching splash 120ms timer)
+            let lastDraw = 0;
+            function animate(timestamp) {
+                if (timestamp - lastDraw > 120) { // 120ms = ~8 FPS
+                    draw();
+                    lastDraw = timestamp;
+                }
+                requestAnimationFrame(animate);
+            }
+
+            // инициализация
+            window.addEventListener('resize', resize);
+            resize();
+            requestAnimationFrame(animate);
+
+            // --- typing effect on subtitle ---
+            const subtitle = document.querySelector('.hero-subtitle');
+            if (subtitle) {
+                const text = subtitle.textContent;
+                subtitle.textContent = '';
+                let i = 0;
+                const typeWriter = () => {
+                    if (i < text.length) {
+                        subtitle.textContent += text.charAt(i);
+                        i++;
+                        setTimeout(typeWriter, 50);
+                    }
+                };
+                setTimeout(typeWriter, 500);
+            }
+
+            // --- scroll fade-in effect for feature cards ---
+            const cards = document.querySelectorAll('.feature-card');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry, idx) => {
+                    if (entry.isIntersecting) {
+                        setTimeout(() => {
+                            entry.target.style.opacity = '1';
+                            entry.target.style.transform = 'translateY(0)';
+                        }, idx * 100);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            cards.forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(30px)';
+                card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(card);
+            });
+        })();
+    </script>
+</body>
+</html>
